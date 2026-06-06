@@ -1,41 +1,26 @@
 #include "chip8.h"
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define DEBUG
 
-// enum {
-//     ADDR_PROG_START   = 0x0200,
-//     ADDR_FONT_START   = 0x0050
-// };
-//
-// typedef struct {
-//     uint8_t memory[4096];
-//     uint8_t registers[16];
-//     uint16_t I;
-//     uint8_t delay_timer;
-//     uint8_t sound_timer;
-//     uint16_t pc;
-//     uint8_t sp;
-//     uint16_t stack[16];
-// } chip8_cpu_t;
+const uint8_t temp_rom[] = {
+    0x65, 0x01, // LD V5, 0x01
+    0x75, 0x01, // ADD V5, 0x01
+    0x75, 0x05, // ADD v%, 0x05
+    0x00, 0x00  // BRK
+};
 
-void *init_cpu(chip8_cpu_t *cpu) {
-  // write zero to everything but the memory
+int main(void) {
+  chip8_cpu_t *cpu = (chip8_cpu_t *)malloc(sizeof(chip8_cpu_t));
+  init_cpu(cpu);
+
+  memcpy(cpu->memory + 0x200, temp_rom, sizeof(temp_rom));
+
+  while (1) {
+    cpu_step(cpu);
+  }
+
+  return EXIT_SUCCESS;
 }
-
-void cpu_step(chip8_cpu_t *cpu) {
-  // fetch
-  // decode & axecute
-}
-
-uint16_t get_keyboad_input()
-
-    int load_rom()
-
-        void cpu_update_timers()
-
-            uint8_t
-    read_memory(chip8_cpu_t *cpu,
-                uint16_t memaddr) int write_memory(chip8_cpu_t *cpu,
-                                                   uint16_t memaddr,
-                                                   uint8_t value)

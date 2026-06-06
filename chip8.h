@@ -19,3 +19,5 @@ typedef struct {
     uint16_t keypad;
 } chip8_cpu_t;
 
+int init_cpu(chip8_cpu_t *cpu);
+void cpu_step(chip8_cpu_t *cpu);
