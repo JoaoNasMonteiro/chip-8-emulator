@@ -104,7 +104,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         case 0x00: // 0000 - HLT
             sprintf(mnemonic, "HLT");
             while (1) {
-                printf("");
+                ;
             }
             break;
         case 0xe0: // 00E0 - CLS
