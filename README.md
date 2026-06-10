@@ -2,7 +2,7 @@
 
 Simple chip8 emulator made based on cowgod's spacifications
 
-To build run `make` on the project root
+To build run `make` on the project root, the compiled binary should appear as `bin/chip_emulator`
 
 Depends on `libsdl2-dev`
 
