@@ -43,7 +43,9 @@ int main(int argc, char *argv[]) {
         }
 
         for (int i = 0; i < 8; i++) {
-            cpu_step(cpu);
+            if (!cpu->is_halted) {
+                cpu_step(cpu);
+            }
         }
         render_update(cpu->display_buffer);
 
@@ -77,7 +79,7 @@ size_t read_rom(uint8_t *rom_buffer, char *filename) {
                bytes_read);
     }
 
-    printf("Simulation shutting down \n");
+    printf("ROM %s read successfully \n", filename);
     fclose(file);
     return bytes_read;
 }

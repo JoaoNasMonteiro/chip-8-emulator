@@ -25,6 +25,7 @@ typedef struct {
     uint8_t sp;
     uint16_t stack[16];
     uint16_t keypad;
+    uint8_t is_halted;
 } chip8_cpu_t;
 
 int init_cpu(chip8_cpu_t *cpu);

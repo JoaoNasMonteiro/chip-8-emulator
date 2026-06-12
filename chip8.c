@@ -29,6 +29,9 @@
 //     uint16_t stack[16];
 // } chip8_cpu_t;
 
+static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
+                                 uint8_t n);
+
 const uint8_t fontset[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -56,6 +59,8 @@ int init_cpu(chip8_cpu_t *cpu) {
     }
     // initialize everything to know state (all zeroes)
     memset(cpu, 0, sizeof(chip8_cpu_t));
+
+    cpu->is_halted = 0;
 
     // init fontset
     memcpy(cpu->memory + 0x050, fontset, sizeof(fontset));
@@ -103,9 +108,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         switch (kk) {
         case 0x00: // 0000 - HLT
             sprintf(mnemonic, "HLT");
-            while (1) {
-                printf("");
-            }
+            cpu->is_halted = 1;
             break;
         case 0xe0: // 00E0 - CLS
             sprintf(mnemonic, "CLS");
@@ -127,6 +130,34 @@ void cpu_step(chip8_cpu_t *cpu) {
         cpu->pc = nnn;
         break;
 
+    case 0x2000: // 2nnn - CALL addr
+        sprintf(mnemonic, "CALL 0x%03X", nnn);
+        cpu->sp++;
+        cpu->stack[cpu->sp] = cpu->pc;
+        cpu->pc = nnn;
+        break;
+
+    case 0x3000: // 3xkk - SE Vx, byte
+        sprintf(mnemonic, "SE V%X, 0x%02X", x, kk);
+        if (cpu->registers[x] == kk) {
+            cpu->pc += 2;
+        }
+        break;
+
+    case 0x4000: // 4xkk - SNE Vx, byte
+        sprintf(mnemonic, "SNE V%X, 0x%02X", x, kk);
+        if (cpu->registers[x] != kk) {
+            cpu->pc += 2;
+        }
+        break;
+
+    case 0x5000: // 5xy0 - SE Vx, Vy
+        sprintf(mnemonic, "SE V%X, V%X", x, y);
+        if (cpu->registers[x] == cpu->registers[y]) {
+            cpu->pc += 2;
+        }
+        break;
+
     case 0x6000: // 6xkk - LD Vx, Byte
         sprintf(mnemonic, "LD V%X, 0x%02X", x, kk);
         cpu->registers[x] = kk;
@@ -137,12 +168,35 @@ void cpu_step(chip8_cpu_t *cpu) {
         cpu->registers[x] += kk;
         break;
 
+    case 0x8000: // 8xy Family
+
+        switch (n) {
+        case 0x0: // 8xy0 - LD Vx, Vy
+            sprintf(mnemonic, "LD V%X, V%X", x, y);
+            cpu->registers[x] = cpu->registers[y];
+            break;
+        case 0x1: // 8xy1 - OR Vx, Vy
+            sprintf(mnemonic, "OR, V%X, V%X", x, y);
+            cpu->registers[x] = cpu->registers[x] | cpu->registers[y];
+            break;
+        case 0x2: // 8xy2 - AND Vx, Vy
+            sprintf(mnemonic, "AND, V%X, V%X", x, y);
+            cpu->registers[x] = cpu->registers[x] & cpu->registers[y];
+            break;
+        case 0x3: // 8xy2 - XOR Vx, Vy
+            sprintf(mnemonic, "XOR, V%X, V%X", x, y);
+            cpu->registers[x] = cpu->registers[x] ^ cpu->registers[y];
+            break;
+        }
+
+        break;
+
     case 0xA000: // Annn - LD I, addr
         sprintf(mnemonic, "LD I, 0x%03X", nnn);
         cpu->I = nnn;
         break;
 
-    case 0xD000: // DRW Vy, Vy, nibble
+    case 0xD000: // DRW Vx, Vy, nibble
         // fetch a sprite from memory and draw it starting from the positionat
         // vx and vy each sprite is one byte long (so 1100 0001 would be liek
         // draw two pixels, skip 5 then draw another) sprites are xored rather
@@ -152,38 +206,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         // of the display
 
         sprintf(mnemonic, "DRW V%X, V%X, %X", x, y, n);
-
-        uint8_t start_x = cpu->registers[x] % DISPLAY_WIDTH;
-        uint8_t start_y = cpu->registers[y] % DISPLAY_HEIGHT;
-
-        cpu->registers[0xF] = 0;
-
-        for (int row = 0; row < n; row++) {
-            uint8_t sprite_byte = cpu->memory[cpu->I + row];
-
-            for (int col = 0; col < 8; col++) {
-                uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 1;
-
-                if (sprite_pixel == 0) {
-                    continue;
-                }
-
-                uint16_t current_x = start_x + col;
-                uint16_t current_y = start_y + row;
-
-                if (current_x >= DISPLAY_WIDTH || current_y >= DISPLAY_HEIGHT) {
-                    continue;
-                }
-
-                uint16_t buff_index = (current_y * DISPLAY_WIDTH) + current_x;
-
-                if (cpu->display_buffer[buff_index] == 1) {
-                    cpu->registers[0xF] = 1;
-                }
-
-                cpu->display_buffer[buff_index] ^= 1;
-            }
-        }
+        i_drw_vx_vy_n(cpu, x, y, n);
         break;
 
     default:
@@ -208,6 +231,41 @@ size_t load_rom(chip8_cpu_t *cpu, const uint8_t *rom_buffer, size_t rom_size) {
 
     memcpy(cpu->memory + ADDR_PROG_START, rom_buffer, rom_size);
     return rom_size;
+}
+
+static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
+                                 uint8_t n) {
+    uint8_t start_x = cpu->registers[x] % DISPLAY_WIDTH;
+    uint8_t start_y = cpu->registers[y] % DISPLAY_HEIGHT;
+
+    cpu->registers[0xF] = 0;
+
+    for (int row = 0; row < n; row++) {
+        uint8_t sprite_byte = cpu->memory[cpu->I + row];
+
+        for (int col = 0; col < 8; col++) {
+            uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 1;
+
+            if (sprite_pixel == 0) {
+                continue;
+            }
+
+            uint16_t current_x = start_x + col;
+            uint16_t current_y = start_y + row;
+
+            if (current_x >= DISPLAY_WIDTH || current_y >= DISPLAY_HEIGHT) {
+                continue;
+            }
+
+            uint16_t buff_index = (current_y * DISPLAY_WIDTH) + current_x;
+
+            if (cpu->display_buffer[buff_index] == 1) {
+                cpu->registers[0xF] = 1;
+            }
+
+            cpu->display_buffer[buff_index] ^= 1;
+        }
+    }
 }
 
 // uint16_t get_keyboad_input()
