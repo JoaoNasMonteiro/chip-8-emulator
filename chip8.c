@@ -13,22 +13,6 @@
 #define DEBUG_PRINT(fmt, ...)
 #endif
 
-// enum {
-//     ADDR_PROG_START   = 0x0200,
-//     ADDR_FONT_START   = 0x0050
-// };
-//
-// typedef struct {
-//     uint8_t memory[4096];
-//     uint8_t registers[16];
-//     uint16_t I;
-//     uint8_t delay_timer;
-//     uint8_t sound_timer;
-//     uint16_t pc;
-//     uint8_t sp;
-//     uint16_t stack[16];
-// } chip8_cpu_t;
-
 static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
                                  uint8_t n);
 
@@ -269,8 +253,8 @@ void cpu_step(chip8_cpu_t *cpu) {
         uint8_t rnd_byte = rand() % 256;
         cpu->registers[x] = rnd_byte & kk;
 
-            break;
-        }
+        break;
+    }
 
     case 0xD000: { // DRW Vx, Vy, nibble
         // fetch a sprite from memory and draw it starting from the positionat
@@ -293,8 +277,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         break;
     }
 
-    DEBUG_PRINT("PC:%04X | OP:%04X | %s | V%X: %04X\n", cpu->pc - 2, opcode,
-                mnemonic, x, cpu->registers[x]);
+    DEBUG_PRINT("PC:%04X | OP:%04X | %s\n", cpu->pc - 2, opcode, mnemonic);
 }
 
 size_t load_rom(chip8_cpu_t *cpu, const uint8_t *rom_buffer, size_t rom_size) {
