@@ -168,35 +168,111 @@ void cpu_step(chip8_cpu_t *cpu) {
         cpu->registers[x] += kk;
         break;
 
-    case 0x8000: // 8xy Family
+    case 0x8000: { // 8xy Family
 
         switch (n) {
-        case 0x0: // 8xy0 - LD Vx, Vy
+        case 0x0: { // 8xy0 - LD Vx, Vy
             sprintf(mnemonic, "LD V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[y];
             break;
-        case 0x1: // 8xy1 - OR Vx, Vy
+        }
+        case 0x1: { // 8xy1 - OR Vx, Vy
             sprintf(mnemonic, "OR, V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[x] | cpu->registers[y];
             break;
-        case 0x2: // 8xy2 - AND Vx, Vy
-            sprintf(mnemonic, "AND, V%X, V%X", x, y);
-            cpu->registers[x] = cpu->registers[x] & cpu->registers[y];
-            break;
-        case 0x3: // 8xy2 - XOR Vx, Vy
+        }
+        case 0x2: {
+            { // 8xy2 - AND Vx, Vy
+                sprintf(mnemonic, "AND, V%X, V%X", x, y);
+                cpu->registers[x] = cpu->registers[x] & cpu->registers[y];
+                break;
+            }
+        }
+        case 0x3: // 8xy3 - XOR Vx, Vy
             sprintf(mnemonic, "XOR, V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[x] ^ cpu->registers[y];
             break;
+        case 0x4: { // 8xy4 - ADD Vx, Vy
+            sprintf(mnemonic, "ADD, V%X, V%X", x, y);
+            cpu->registers[0xf] = 0;
+            uint16_t sum = cpu->registers[x] + cpu->registers[y];
+            cpu->registers[x] = sum & 0xff;
+            if (sum > 255) {
+                cpu->registers[0xf] = 1;
+            }
+            break;
+        }
+        case 0x5: { // 8xy5 - SUB Vx, Vy
+            sprintf(mnemonic, "SUB, V%X, V%X", x, y);
+            cpu->registers[0xf] = 0;
+            uint8_t not_borrow =
+                (cpu->registers[x] >= cpu->registers[y]) ? 1 : 0;
+            cpu->registers[x] = cpu->registers[x] - cpu->registers[y];
+            cpu->registers[0xf] = not_borrow;
+            break;
+        }
+        case 0x6: { // 8xy6 - SHR Vx {, Vy}
+            sprintf(mnemonic, "SHR V%X {, V%X}", x, y);
+            cpu->registers[0xf] = 0;
+            if (cpu->config.mode == CLASSIC) {
+                cpu->registers[x] = cpu->registers[y];
+            }
+            cpu->registers[0xf] = cpu->registers[x] & 0x1;
+            cpu->registers[x] >>= 1;
+            break;
+        }
+        case 0x7: { // 8xy7 - SUBN Vx, Vy
+            sprintf(mnemonic, "SUBN, V%X, V%X", x, y);
+            cpu->registers[0xf] = 0;
+            uint8_t not_borrow =
+                (cpu->registers[x] <= cpu->registers[y]) ? 1 : 0;
+            cpu->registers[x] = cpu->registers[y] - cpu->registers[x];
+            cpu->registers[0xf] = not_borrow;
+            break;
+        }
+        case 0xe: { // 8xyE - SHL Vx {, Vy}
+            sprintf(mnemonic, "SHL V%X {, V%X}", x, y);
+            if (cpu->config.mode == CLASSIC) {
+                cpu->registers[x] = cpu->registers[y];
+            }
+            cpu->registers[0xf] = (cpu->registers[x] & 0x80) >> 7;
+            cpu->registers[x] <<= 1;
+            break;
+        }
         }
 
         break;
+    }
 
-    case 0xA000: // Annn - LD I, addr
+    case 0x9000: { // 9xy0 - SNE Vx, Vy
+        sprintf(mnemonic, "SNE V%X, V%X", x, y);
+        if (cpu->registers[x] != cpu->registers[y]) {
+            cpu->pc += 2;
+        }
+        break;
+    }
+
+    case 0xA000: { // Annn - LD I, addr
         sprintf(mnemonic, "LD I, 0x%03X", nnn);
         cpu->I = nnn;
         break;
+    }
 
-    case 0xD000: // DRW Vx, Vy, nibble
+    case 0xB000: { // Bnnn - JP V0, addr
+        sprintf(mnemonic, "JP V0, 0x%03X", nnn);
+        cpu->pc = nnn + cpu->registers[0];
+        break;
+    }
+
+    case 0xC000: { // Cxkk - RND Vx, Byte
+        sprintf(mnemonic, "RND V%X, %02X", x, kk);
+        uint8_t rnd_byte = rand() % 256;
+        cpu->registers[x] = rnd_byte & kk;
+
+            break;
+        }
+
+    case 0xD000: { // DRW Vx, Vy, nibble
         // fetch a sprite from memory and draw it starting from the positionat
         // vx and vy each sprite is one byte long (so 1100 0001 would be liek
         // draw two pixels, skip 5 then draw another) sprites are xored rather
@@ -208,6 +284,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         sprintf(mnemonic, "DRW V%X, V%X, %X", x, y, n);
         i_drw_vx_vy_n(cpu, x, y, n);
         break;
+    }
 
     default:
         errno = EINVAL;
