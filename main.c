@@ -1,5 +1,3 @@
-#include "chip8.h"
-#include "render.h"
 #include <SDL2/SDL_timer.h>
 #include <signal.h>
 #include <stddef.h>
@@ -7,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "./render.h"
+#include "./chip8.h"
 
 size_t read_rom(uint8_t *rom_buffer, char *filename);
 void handle_sigint(int signum);

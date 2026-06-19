@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chip8.h"
+#include "./chip8.h"
 
 #ifdef DEBUG_BUILD
 #define DEBUG_PRINT(fmt, ...) fprintf(stderr, "DEBUG: " fmt, ##__VA_ARGS__)
@@ -91,64 +91,64 @@ void cpu_step(chip8_cpu_t *cpu) {
     case 0x0000: // 00 family
         switch (kk) {
         case 0x00: // 0000 - HLT
-            sprintf(mnemonic, "HLT");
+            snprintf(mnemonic, sizeof(mnemonic), "HLT");
             cpu->is_halted = 1;
             break;
         case 0xe0: // 00E0 - CLS
-            sprintf(mnemonic, "CLS");
+            snprintf(mnemonic, sizeof(mnemonic), "CLS");
             memset(cpu->display_buffer, 0, MAX_DISPLAY_SIZE);
             break;
         case 0xee: // 00EE - RET
-            sprintf(mnemonic, "RET");
+            snprintf(mnemonic, sizeof(mnemonic), "RET");
             cpu->sp--;
             cpu->pc = cpu->stack[cpu->sp];
             break;
         default:
-            sprintf(mnemonic, "SYS 0x%03X (IGNORED)", nnn);
+            snprintf(mnemonic, sizeof(mnemonic), "SYS 0x%03X (IGNORED)", nnn);
             break;
         }
         break;
 
     case 0x1000: // 1nnn - JP addr
-        sprintf(mnemonic, "JP 0x%03X", nnn);
+        snprintf(mnemonic, sizeof(mnemonic), "JP 0x%03X", nnn);
         cpu->pc = nnn;
         break;
 
     case 0x2000: // 2nnn - CALL addr
-        sprintf(mnemonic, "CALL 0x%03X", nnn);
+        snprintf(mnemonic, sizeof(mnemonic), "CALL 0x%03X", nnn);
         cpu->sp++;
         cpu->stack[cpu->sp] = cpu->pc;
         cpu->pc = nnn;
         break;
 
     case 0x3000: // 3xkk - SE Vx, byte
-        sprintf(mnemonic, "SE V%X, 0x%02X", x, kk);
+        snprintf(mnemonic, sizeof(mnemonic), "SE V%X, 0x%02X", x, kk);
         if (cpu->registers[x] == kk) {
             cpu->pc += 2;
         }
         break;
 
     case 0x4000: // 4xkk - SNE Vx, byte
-        sprintf(mnemonic, "SNE V%X, 0x%02X", x, kk);
+        snprintf(mnemonic, sizeof(mnemonic), "SNE V%X, 0x%02X", x, kk);
         if (cpu->registers[x] != kk) {
             cpu->pc += 2;
         }
         break;
 
     case 0x5000: // 5xy0 - SE Vx, Vy
-        sprintf(mnemonic, "SE V%X, V%X", x, y);
+        snprintf(mnemonic, sizeof(mnemonic), "SE V%X, V%X", x, y);
         if (cpu->registers[x] == cpu->registers[y]) {
             cpu->pc += 2;
         }
         break;
 
     case 0x6000: // 6xkk - LD Vx, Byte
-        sprintf(mnemonic, "LD V%X, 0x%02X", x, kk);
+        snprintf(mnemonic, sizeof(mnemonic), "LD V%X, 0x%02X", x, kk);
         cpu->registers[x] = kk;
         break;
 
     case 0x7000: // 7xkk - ADD Vx, byte
-        sprintf(mnemonic, "ADD V%X, 0x%02X", x, kk);
+        snprintf(mnemonic, sizeof(mnemonic), "ADD V%X, 0x%02X", x, kk);
         cpu->registers[x] += kk;
         break;
 
@@ -156,28 +156,28 @@ void cpu_step(chip8_cpu_t *cpu) {
 
         switch (n) {
         case 0x0: { // 8xy0 - LD Vx, Vy
-            sprintf(mnemonic, "LD V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "LD V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[y];
             break;
         }
         case 0x1: { // 8xy1 - OR Vx, Vy
-            sprintf(mnemonic, "OR, V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "OR, V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[x] | cpu->registers[y];
             break;
         }
         case 0x2: {
             { // 8xy2 - AND Vx, Vy
-                sprintf(mnemonic, "AND, V%X, V%X", x, y);
+                snprintf(mnemonic, sizeof(mnemonic), "AND, V%X, V%X", x, y);
                 cpu->registers[x] = cpu->registers[x] & cpu->registers[y];
                 break;
             }
         }
         case 0x3: // 8xy3 - XOR Vx, Vy
-            sprintf(mnemonic, "XOR, V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "XOR, V%X, V%X", x, y);
             cpu->registers[x] = cpu->registers[x] ^ cpu->registers[y];
             break;
         case 0x4: { // 8xy4 - ADD Vx, Vy
-            sprintf(mnemonic, "ADD, V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "ADD, V%X, V%X", x, y);
             cpu->registers[0xf] = 0;
             uint16_t sum = cpu->registers[x] + cpu->registers[y];
             cpu->registers[x] = sum & 0xff;
@@ -187,7 +187,7 @@ void cpu_step(chip8_cpu_t *cpu) {
             break;
         }
         case 0x5: { // 8xy5 - SUB Vx, Vy
-            sprintf(mnemonic, "SUB, V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "SUB, V%X, V%X", x, y);
             cpu->registers[0xf] = 0;
             uint8_t not_borrow =
                 (cpu->registers[x] >= cpu->registers[y]) ? 1 : 0;
@@ -196,7 +196,7 @@ void cpu_step(chip8_cpu_t *cpu) {
             break;
         }
         case 0x6: { // 8xy6 - SHR Vx {, Vy}
-            sprintf(mnemonic, "SHR V%X {, V%X}", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "SHR V%X {, V%X}", x, y);
             cpu->registers[0xf] = 0;
             if (cpu->config.mode == CLASSIC) {
                 cpu->registers[x] = cpu->registers[y];
@@ -206,7 +206,7 @@ void cpu_step(chip8_cpu_t *cpu) {
             break;
         }
         case 0x7: { // 8xy7 - SUBN Vx, Vy
-            sprintf(mnemonic, "SUBN, V%X, V%X", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "SUBN, V%X, V%X", x, y);
             cpu->registers[0xf] = 0;
             uint8_t not_borrow =
                 (cpu->registers[x] <= cpu->registers[y]) ? 1 : 0;
@@ -215,7 +215,7 @@ void cpu_step(chip8_cpu_t *cpu) {
             break;
         }
         case 0xe: { // 8xyE - SHL Vx {, Vy}
-            sprintf(mnemonic, "SHL V%X {, V%X}", x, y);
+            snprintf(mnemonic, sizeof(mnemonic), "SHL V%X {, V%X}", x, y);
             if (cpu->config.mode == CLASSIC) {
                 cpu->registers[x] = cpu->registers[y];
             }
@@ -229,7 +229,7 @@ void cpu_step(chip8_cpu_t *cpu) {
     }
 
     case 0x9000: { // 9xy0 - SNE Vx, Vy
-        sprintf(mnemonic, "SNE V%X, V%X", x, y);
+        snprintf(mnemonic, sizeof(mnemonic), "SNE V%X, V%X", x, y);
         if (cpu->registers[x] != cpu->registers[y]) {
             cpu->pc += 2;
         }
@@ -237,19 +237,19 @@ void cpu_step(chip8_cpu_t *cpu) {
     }
 
     case 0xA000: { // Annn - LD I, addr
-        sprintf(mnemonic, "LD I, 0x%03X", nnn);
+        snprintf(mnemonic, sizeof(mnemonic), "LD I, 0x%03X", nnn);
         cpu->I = nnn;
         break;
     }
 
     case 0xB000: { // Bnnn - JP V0, addr
-        sprintf(mnemonic, "JP V0, 0x%03X", nnn);
+        snprintf(mnemonic, sizeof(mnemonic), "JP V0, 0x%03X", nnn);
         cpu->pc = nnn + cpu->registers[0];
         break;
     }
 
     case 0xC000: { // Cxkk - RND Vx, Byte
-        sprintf(mnemonic, "RND V%X, %02X", x, kk);
+        snprintf(mnemonic, sizeof(mnemonic), "RND V%X, %02X", x, kk);
         uint8_t rnd_byte = rand() % 256;
         cpu->registers[x] = rnd_byte & kk;
 
@@ -265,15 +265,14 @@ void cpu_step(chip8_cpu_t *cpu) {
         // must be modulo wrapped, but the sprite stself can blled over the edge
         // of the display
 
-        sprintf(mnemonic, "DRW V%X, V%X, %X", x, y, n);
+        snprintf(mnemonic, sizeof(mnemonic), "DRW V%X, V%X, %X", x, y, n);
         i_drw_vx_vy_n(cpu, x, y, n);
         break;
     }
 
     default:
         errno = EINVAL;
-        sprintf(mnemonic, "Safe String");
-        perror("Could not execute instruction - invalid operation");
+        snprintf(mnemonic, sizeof(mnemonic), "invalid operation");
         break;
     }
 
@@ -334,8 +333,7 @@ static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
 //
 //         void cpu_update_timers()
 //
-//             uint8_t
-//     read_memory(chip8_cpu_t *cpu,
-//                 uint16_t memaddr) int write_memory(chip8_cpu_t *cpu,
+//             uint8_t read_memory(chip8_cpu_t *cpu, uint16_t memaddr) int
+//     write_memory(chip8_cpu_t *cpu,
 //                                                    uint16_t memaddr,
 //                                                   uint8_t value)
