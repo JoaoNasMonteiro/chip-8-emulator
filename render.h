@@ -11,8 +11,6 @@ void render_update(const uint8_t* display_buffer);
 
 void render_cleanup(void);
 
-bool render_check_quit(void);
-
 bool process_input_events(chip8_cpu_t *cpu);
 
 #endif

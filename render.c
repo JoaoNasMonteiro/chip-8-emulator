@@ -84,16 +84,6 @@ void render_cleanup(void) {
     SDL_Quit();
 }
 
-bool render_check_quit(void) {
-    SDL_Event e;
-    // Process all pending events in the queue
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-            return true; // The user clicked the 'X' button
-        }
-    }
-    return false;
-}
 
 bool process_input_events(chip8_cpu_t *cpu) {
     SDL_Event event;

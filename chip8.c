@@ -87,7 +87,6 @@ void cpu_step(chip8_cpu_t *cpu) {
     // fxyn - 5 (two reg ops with args)
 
     switch (opcode & 0xf000) {
-
     case 0x0000: // 00 family
         switch (kk) {
         case 0x00: // 0000 - HLT
@@ -153,7 +152,6 @@ void cpu_step(chip8_cpu_t *cpu) {
         break;
 
     case 0x8000: { // 8xy Family
-
         switch (n) {
         case 0x0: { // 8xy0 - LD Vx, Vy
             snprintf(mnemonic, sizeof(mnemonic), "LD V%X, V%X", x, y);
@@ -223,6 +221,10 @@ void cpu_step(chip8_cpu_t *cpu) {
             cpu->registers[x] <<= 1;
             break;
         }
+        default:
+            errno = EINVAL;
+            snprintf(mnemonic, sizeof(mnemonic), "invalid operation");
+            break;
         }
 
         break;
@@ -256,7 +258,7 @@ void cpu_step(chip8_cpu_t *cpu) {
         break;
     }
 
-    case 0xD000: { // DRW Vx, Vy, nibble
+    case 0xD000: { // Dxyn - DRW Vx, Vy, nibble
         // fetch a sprite from memory and draw it starting from the positionat
         // vx and vy each sprite is one byte long (so 1100 0001 would be liek
         // draw two pixels, skip 5 then draw another) sprites are xored rather
@@ -270,6 +272,42 @@ void cpu_step(chip8_cpu_t *cpu) {
         break;
     }
 
+    case 0xE000: { // Familia ExXX
+        switch (kk) {
+        case 0x9E: { // Ex9E - SKP Vx
+            snprintf(mnemonic, sizeof(mnemonic), "SKP V%X", x);
+            if ((cpu->keypad & (1 << cpu->registers[x])) != 0) {
+                cpu->pc += 2;
+            }
+        }
+        case 0xA1: { // ExA1 - SKNP Vx
+            snprintf(mnemonic, sizeof(mnemonic), "SKNP V%X", x);
+            if ((cpu->keypad & (1 << cpu->registers[x])) == 0) {
+                cpu->pc += 2;
+            }
+        }
+        default:
+            errno = EINVAL;
+            snprintf(mnemonic, sizeof(mnemonic), "invalid operation");
+            break;
+        }
+
+        break;
+    }
+
+    case 0xF000: { // 0xF Family
+        switch (kk) {
+        case 0x07: { // Fx07 - LD Vx, DT
+            snprintf(mnemonic, sizeof(mnemonic), "LD V%X, DT", x);
+            cpu->registers[x] = cpu->delay_timer;
+        }
+        case 0x0A: { // FX0A - LD Vx, K
+            snprintf(mnemonic, sizeof(mnemonic), "LD, V%X, K", x);
+           break; 
+        }
+        }
+    }
+
     default:
         errno = EINVAL;
         snprintf(mnemonic, sizeof(mnemonic), "invalid operation");
@@ -277,6 +315,7 @@ void cpu_step(chip8_cpu_t *cpu) {
     }
 
     DEBUG_PRINT("PC:%04X | OP:%04X | %s\n", cpu->pc - 2, opcode, mnemonic);
+    DEBUG_PRINT("KEYPAD: %16b\n", cpu->keypad);
 }
 
 size_t load_rom(chip8_cpu_t *cpu, const uint8_t *rom_buffer, size_t rom_size) {

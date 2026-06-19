@@ -3,7 +3,7 @@ BUILD_DIR := build
 TARGET_DIR := bin
 TARGET_BIN := $(TARGET_DIR)/chip_emulator
 
-CFLAGS := -std=gnu99 -Wall -Wextra -Werror
+CFLAGS := -Wall -Wextra -Werror -std=gnu99 
 LDFLAGS := -lSDL2
 
 BUILD_TYPE ?= debug

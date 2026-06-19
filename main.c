@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 
     while (emulator_running) {
 
-        if (render_check_quit()) {
+        if (process_input_events(cpu)) {
             break;
         }
 

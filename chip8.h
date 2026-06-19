@@ -5,19 +5,16 @@
 #include <stdlib.h>
 
 enum {
-    MEM_SIZE          = 4096,
-    DISPLAY_WIDTH     = 64,
-    DISPLAY_HEIGHT    = 32,
-    ADDR_PROG_START   = 0x0200,
-    ADDR_FONT_START   = 0x0050,
-    MAX_ROM_SIZE      = 0x0e00, // 3584
-    MAX_DISPLAY_SIZE  = DISPLAY_HEIGHT * DISPLAY_WIDTH
+    MEM_SIZE = 4096,
+    DISPLAY_WIDTH = 64,
+    DISPLAY_HEIGHT = 32,
+    ADDR_PROG_START = 0x0200,
+    ADDR_FONT_START = 0x0050,
+    MAX_ROM_SIZE = 0x0e00, // 3584
+    MAX_DISPLAY_SIZE = DISPLAY_HEIGHT * DISPLAY_WIDTH
 }; // magic number literal substitution
 
-enum {
-    CLASSIC = 0,
-    SUPER   = 1
-}; // cpu modes
+enum { CLASSIC = 0, SUPER = 1 }; // cpu modes
 
 struct chip8_cpu_config {
     uint8_t mode;
@@ -38,7 +35,7 @@ typedef struct chip8_cpu {
     struct chip8_cpu_config config;
 } chip8_cpu_t;
 
-/* Original (Hex)               Moderno (QWERTY)
+/* Original (Hex)               Modern (QWERTY)
  * +---+---+---+---+             +---+---+---+---+
  * | 1 | 2 | 3 | C |    ==>      | 1 | 2 | 3 | 4 |
  * +---+---+---+---+             +---+---+---+---+
@@ -49,7 +46,6 @@ typedef struct chip8_cpu {
  * | A | 0 | B | F |    ==>      | Z | X | C | V |
  * +---+---+---+---+             +---+---+---+---+
  */
-
 
 int init_cpu(chip8_cpu_t *cpu);
 void cpu_step(chip8_cpu_t *cpu);
