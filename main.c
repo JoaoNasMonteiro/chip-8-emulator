@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "./render.h"
 #include "./chip8.h"
+#include "./render.h"
 
 size_t read_rom(uint8_t *rom_buffer, char *filename);
 void handle_sigint(int signum);
@@ -16,17 +16,14 @@ static volatile sig_atomic_t emulator_running = 1;
 
 int main(int argc, char *argv[]) {
 
-    // parse args
     if (argc != 2) {
         printf("Usage: chip_emulator [rom]\n");
         return EXIT_FAILURE;
     }
 
-    // init CPU
     chip8_cpu_t *cpu = (chip8_cpu_t *)malloc(sizeof(chip8_cpu_t));
     init_cpu(cpu);
 
-    // read ROm into CPU
     uint8_t rom_buffer[MAX_ROM_SIZE];
     size_t rom_size = read_rom(rom_buffer, argv[1]);
     load_rom(cpu, rom_buffer, rom_size);
@@ -48,6 +45,8 @@ int main(int argc, char *argv[]) {
                 cpu_step(cpu);
             }
         }
+
+        cpu_update_timers(cpu);
         render_update(cpu->display_buffer);
 
         SDL_Delay(16);
@@ -76,7 +75,7 @@ size_t read_rom(uint8_t *rom_buffer, char *filename) {
 
     size_t bytes_read = fread(rom_buffer, 1, file_size, file);
     if (bytes_read != file_size) {
-        printf("waring - expected %zu bytes, but got %zu bytes", file_size,
+        printf("warning - expected %zu bytes, but got %zu bytes\n", file_size,
                bytes_read);
     }
 

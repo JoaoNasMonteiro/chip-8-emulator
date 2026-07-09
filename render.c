@@ -3,27 +3,21 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
-// We define these here to keep the renderer completely decoupled from the CPU
-// headers
 #define CHIP8_WIDTH 64
 #define CHIP8_HEIGHT 32
-#define WINDOW_SCALE 15 // Scales the tiny 64x32 display up to a 960x480 window
+#define WINDOW_SCALE 15
 
-// Static variables keep the SDL state completely hidden from the rest of the
-// program
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
 
 bool render_init(const char *title) {
-    // 1. Initialize SDL Video Subsystem
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n",
                 SDL_GetError());
         return false;
     }
 
-    // 2. Create the Window
     window =
         SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                          CHIP8_WIDTH * WINDOW_SCALE,
@@ -34,7 +28,6 @@ bool render_init(const char *title) {
         return false;
     }
 
-    // 3. Create the GPU Renderer
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
         fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n",
@@ -42,7 +35,6 @@ bool render_init(const char *title) {
         return false;
     }
 
-    // 4. Create the Texture (The blank canvas in GPU memory)
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
                                 SDL_TEXTUREACCESS_STREAMING, CHIP8_WIDTH,
                                 CHIP8_HEIGHT);
@@ -56,19 +48,14 @@ bool render_init(const char *title) {
 }
 
 void render_update(const uint8_t *display_buffer) {
-    // SDL requires a 32-bit color value for every pixel.
     uint32_t pixels[CHIP8_WIDTH * CHIP8_HEIGHT];
 
     for (int i = 0; i < CHIP8_WIDTH * CHIP8_HEIGHT; i++) {
-        // If the CPU buffer has a 1, make it White. Else, make it Black.
         pixels[i] = (display_buffer[i] == 1) ? 0xFFFFFFFF : 0x000000FF;
     }
 
-    // Send the translated pixels to the GPU texture
     SDL_UpdateTexture(texture, NULL, pixels, CHIP8_WIDTH * sizeof(uint32_t));
 
-    // Clear the screen, copy the new texture over, and present it to the
-    // monitor
     SDL_RenderClear(renderer);
     SDL_RenderCopy(renderer, texture, NULL, NULL);
     SDL_RenderPresent(renderer);
@@ -84,26 +71,19 @@ void render_cleanup(void) {
     SDL_Quit();
 }
 
-
 bool process_input_events(chip8_cpu_t *cpu) {
     SDL_Event event;
 
-    // Esvazia toda a fila de eventos pendentes
     while (SDL_PollEvent(&event)) {
 
-        // 1. Tratamento de Saída (Janela fechada)
         if (event.type == SDL_QUIT) {
             return true;
         }
 
-        // 2. Tratamento de Tecla Pressionada (Key Down)
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
             case SDLK_ESCAPE:
-                return true; // Boa prática: ESC também fecha o emulador
-
-            // Mapeamento QWERTY para Hexadecimal (Setamos o bit correspondente
-            // para 1)
+                return true;
             case SDLK_x:
                 cpu->keypad |= (1 << 0x0);
                 break;
@@ -155,11 +135,8 @@ bool process_input_events(chip8_cpu_t *cpu) {
             }
         }
 
-        // 3. Tratamento de Tecla Solta (Key Up)
         if (event.type == SDL_KEYUP) {
             switch (event.key.keysym.sym) {
-            // Mapeamento QWERTY para Hexadecimal (Limpamos o bit correspondente
-            // para 0) Usamos a negação (~) para manter os outros bits intactos
             case SDLK_x:
                 cpu->keypad &= ~(1 << 0x0);
                 break;
@@ -212,5 +189,5 @@ bool process_input_events(chip8_cpu_t *cpu) {
         }
     }
 
-    return false; // Continua rodando
+    return false;
 }
