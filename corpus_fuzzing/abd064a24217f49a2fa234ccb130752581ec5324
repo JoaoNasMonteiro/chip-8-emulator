@@ -1,0 +1,26 @@
+-----------------------------------------------------------------------------
+			       	              ////          ////
+	               	      ////   -----
+Title		:	Trip8 / SuperTrip8 demo
+Author		:	Martijn Wenting / Reviva and 4 randomized dot-effects.  
+
+Writing a demo for the original Chip-8 interpreter was a real pain, since your framerate basically drops in half for every sprite you need to draw. So even clearing and redrawing a few dots will cause the framerate to drop to near zero :) Originally the demo was going to be bigger and there were much more graphical effects programmed/prototyped, but a lot of these effects turned out to be too much for the original unoptimized Chip-8 interpreters to handle. 
+
+Running the Demo:
+-----------------
+Use the Megachip ‘mulator or any other Chip-8/SuperChip compatible emulator to run the slideshow.
+
+Credits:
+--------
+Programming/Graphics/Design by: Martijn Wenting
+
+Distribution:
+-------------
+This package can be freely distributed in its original form.
+If you would like to include this slideshow in your rom package, please let me know.
+
+Watch out ng to be bigger and on!
+
+
+	Martijn Wenting / Revival Studios
+

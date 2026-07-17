@@ -1,22 +1,34 @@
 CC := clang
 BUILD_DIR := build
 TARGET_DIR := bin
-TARGET_BIN := $(TARGET_DIR)/chip_emulator
 
-CFLAGS := -Wall -Wextra -Werror -std=gnu99 
+CFLAGS := -Wall -Wextra -Werror -std=gnu99
 LDFLAGS := -lSDL2
 
 BUILD_TYPE ?= debug
 
-ifeq ($(BUILD_TYPE), debug)
-    CFLAGS += -g -DDEBUG_BUILD -fsanitize=address
+ALL_SRCS := $(wildcard *.c)
 
+ifeq ($(BUILD_TYPE), fuzz)
+    CFLAGS += -g -O1 -fsanitize=fuzzer,address,undefined
+    LDFLAGS += -fsanitize=fuzzer,address,undefined
+    TARGET_BIN := $(TARGET_DIR)/chip_emulator_fuzzer
+
+    SRCS := $(filter-out main.c render.c, $(ALL_SRCS))
+
+else ifeq ($(BUILD_TYPE), debug)
+    CFLAGS += -g -DDEBUG_BUILD -fsanitize=address
     LDFLAGS += -fsanitize=address
+    TARGET_BIN := $(TARGET_DIR)/chip_emulator_debug
+
+    SRCS := $(filter-out fuzz.c, $(ALL_SRCS))
+
 else
     CFLAGS += -O3 -DNDEBUG
+    TARGET_BIN := $(TARGET_DIR)/chip_emulator
+    SRCS := $(filter-out fuzz.c, $(ALL_SRCS))
 endif
 
-SRCS := $(wildcard *.c)
 OBJS := $(patsubst %.c, $(BUILD_DIR)/%.o, $(SRCS))
 
 all: directories $(TARGET_BIN)
@@ -32,6 +44,7 @@ $(BUILD_DIR)/%.o: %.c | directories
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
+
 	rm -rf $(BUILD_DIR) $(TARGET_DIR)
 
 .PHONY: all clean directories

@@ -1,0 +1,86 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 4027819926
+INFO: Loaded 1 modules   (544 inline 8-bit counters): 544 [0x633851e39b18, 0x633851e39d38), 
+INFO: Loaded 1 PC tables (544 PCs): 544 [0x633851e39d38,0x633851e3bf38), 
+INFO:      238 files found in corpus_fuzzing/
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: seed corpus: files: 238 min: 7b max: 3203b total: 90678b rss: 36Mb
+chip8.c:100:9: runtime error: index 16 out of bounds for type 'uint16_t[16]' (aka 'unsigned short[16]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:100:9 
+chip8.c:85:23: runtime error: index 16 out of bounds for type 'uint16_t[16]' (aka 'unsigned short[16]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:85:23 
+chip8.c:60:24: runtime error: index 4115 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4096]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:60:24 
+chip8.c:60:53: runtime error: index 4116 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4096]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:60:53 
+#239	INITED cov: 271 ft: 1723 corp: 148/42Kb exec/s: 0 rss: 43Mb
+#296	NEW    cov: 271 ft: 1724 corp: 149/42Kb lim: 1828 exec/s: 0 rss: 43Mb L: 85/1828 MS: 2 CopyPart-EraseBytes-
+#297	REDUCE cov: 271 ft: 1724 corp: 149/42Kb lim: 1828 exec/s: 0 rss: 44Mb L: 133/1828 MS: 1 EraseBytes-
+#307	REDUCE cov: 271 ft: 1724 corp: 149/41Kb lim: 1828 exec/s: 0 rss: 44Mb L: 354/1828 MS: 5 ChangeASCIIInt-CMP-InsertRepeatedBytes-ChangeASCIIInt-CrossOver- DE: "\000\000"-
+#330	REDUCE cov: 271 ft: 1724 corp: 149/41Kb lim: 1828 exec/s: 0 rss: 44Mb L: 101/1828 MS: 3 EraseBytes-ChangeASCIIInt-InsertByte-
+#409	REDUCE cov: 271 ft: 1724 corp: 149/41Kb lim: 1828 exec/s: 0 rss: 44Mb L: 252/1828 MS: 4 ChangeBinInt-CMP-InsertRepeatedBytes-EraseBytes- DE: "$\000\000\000"-
+#429	REDUCE cov: 271 ft: 1724 corp: 149/40Kb lim: 1828 exec/s: 0 rss: 44Mb L: 296/1828 MS: 5 ShuffleBytes-InsertRepeatedBytes-ChangeASCIIInt-InsertRepeatedBytes-EraseBytes-
+#465	REDUCE cov: 271 ft: 1724 corp: 149/40Kb lim: 1828 exec/s: 0 rss: 44Mb L: 71/1828 MS: 1 EraseBytes-
+chip8.c:351:31: runtime error: index 4096 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4096]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:351:31 
+=================================================================
+==4478==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7453a00e585c at pc 0x633851df0b06 bp 0x7ffec1ffd050 sp 0x7ffec1ffd048
+READ of size 1 at 0x7453a00e585c thread T0
+    #0 0x633851df0b05 in i_drw_vx_vy_n /home/jjp/chip-8-emulator/chip8.c:351:31
+    #1 0x633851df0b05 in cpu_step /home/jjp/chip-8-emulator/chip8.c:226:9
+    #2 0x633851df114f in LLVMFuzzerTestOneInput /home/jjp/chip-8-emulator/fuzz.c:25:9
+    #3 0x633851cf8cd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x52cd4) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #4 0x633851cf83c9 in fuzzer::Fuzzer::RunOne(unsigned char const*, unsigned long, bool, fuzzer::InputInfo*, bool, bool*) (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x523c9) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #5 0x633851cf9bb5 in fuzzer::Fuzzer::MutateAndTestOne() (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x53bb5) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #6 0x633851cfa715 in fuzzer::Fuzzer::Loop(std::vector<fuzzer::SizedFile, std::allocator<fuzzer::SizedFile>>&) (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x54715) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #7 0x633851ce79ef in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x419ef) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #8 0x633851d12076 in main (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x6c076) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+    #9 0x7453a222a1c9  (/lib/x86_64-linux-gnu/libc.so.6+0x2a1c9) (BuildId: 8e9fd827446c24067541ac5390e6f527fb5947bb)
+    #10 0x7453a222a28a in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8e9fd827446c24067541ac5390e6f527fb5947bb)
+    #11 0x633851cdc9d4 in _start (/home/jjp/chip-8-emulator/bin/chip_emulator_fuzzer+0x369d4) (BuildId: 76b199886f9828c386d2c47a90f91a36a097dc57)
+
+Address 0x7453a00e585c is located in stack of thread T0 at offset 6236 in frame
+    #0 0x633851df0fb7 in LLVMFuzzerTestOneInput /home/jjp/chip-8-emulator/fuzz.c:7
+
+  This frame has 1 object(s):
+    [32, 6236) 'cpu' (line 12) <== Memory access at offset 6236 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow /home/jjp/chip-8-emulator/chip8.c:351:31 in i_drw_vx_vy_n
+Shadow bytes around the buggy address:
+  0x7453a00e5580: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5600: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5680: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5700: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5780: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x7453a00e5800: 00 00 00 00 00 00 00 00 00 00 00[04]f3 f3 f3 f3
+  0x7453a00e5880: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3
+  0x7453a00e5900: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 00 00 00 00
+  0x7453a00e5980: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5a00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7453a00e5a80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==4478==ABORTING
+MS: 4 CopyPart-ChangeBit-PersAutoDict-ChangeBit- DE: "$\000\000\000"-; base unit: 4cbc667e084332dcbe1b3d7aa5dc380a20bbfa59
+0x0,0xe0,0x60,0x0,0x61,0x0,0x62,0x8,0xa2,0x20,0x40,0x40,0x22,0x1a,0x41,0x20,0x32,0x10,0xd0,0x18,0xf2,0x1e,0x70,0x8,0x12,0xa,0x60,0x0,0x71,0x1,0x0,0x8,0x0,0xee,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x7f,0x40,0x5f,0x50,0x57,0x54,0x54,0x2a,0x2a,0x3b,0x0,0x2a,0x2a,0x2a,0x2a,0x2a,0x2a,0xee,0x0,0xea,0xa,0xfa,0x2,0xfe,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xe0,0x60,0x0,0x61,0x0,0x62,0x8,0xa2,0x20,0x40,0x40,0x22,0x1a,0x41,0x20,0x12,0x10,0xd0,0x18,0xf2,0x1e,0x70,0x8,0x12,0xa,0x60,0x40,0x71,0x1,0x0,0x8,0x0,0xee,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x7f,0x40,0x5f,0x50,0x57,0x54,0x54,0x2a,0x2a,0x3b,0x0,0x2a,0x2a,0x2a,0x2a,0x2a,0x2a,0xee,0x0,0xea,0xa,0xfa,0x2,0xfe,0x0,0x0,0x0,0x24,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+\000\340`\000a\000b\010\242 @@\"\032A 2\020\320\030\362\036p\010\022\012`\000q\001\000\010\000\356\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\177@_PWTT**;\000******\356\000\352\012\372\002\376\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\340`\000a\000b\010\242 @@\"\032A \022\020\320\030\362\036p\010\022\012`@q\001\000\010\000\356\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\177@_PWTT**;\000******\356\000\352\012\372\002\376\000\000\000$\000\000\000\000\000\000\000\000\000\000\000\000\000\000
+artifact_prefix='./'; Test unit written to ./crash-5c4b865f1d8fb4d5defeb89ce79340f4ee5527fd
+Base64: AOBgAGEAYgiiIEBAIhpBIDIQ0BjyHnAIEgpgAHEBAAgA7gAAAAAAAAAAAAAAAAAAAAAAf0BfUFdUVCoqOwAqKioqKiruAOoK+gL+AAAAAAAAAAAAAAAAAAAAAADgYABhAGIIoiBAQCIaQSASENAY8h5wCBIKYEBxAQAIAO4AAAAAAAAAAAAAAAAAAAAAAH9AX1BXVFQqKjsAKioqKioq7gDqCvoC/gAAACQAAAAAAAAAAAAAAAAAAA==
