@@ -1,0 +1,3 @@
+[1mmain.c:73:9: [31merror:[39m Resource leak: file [resourceLeak][0m
+        return -1;
+        ^
