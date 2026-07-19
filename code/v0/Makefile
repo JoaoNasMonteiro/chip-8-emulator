@@ -10,8 +10,8 @@ BUILD_TYPE ?= debug
 ALL_SRCS := $(wildcard *.c)
 
 ifeq ($(BUILD_TYPE), fuzz)
-    CFLAGS += -g -O1 -fsanitize=fuzzer,address,undefined
-    LDFLAGS += -fsanitize=fuzzer,address,undefined
+    CFLAGS += -g -O1 -fsanitize=fuzzer,address,undefined -v
+    LDFLAGS += -fsanitize=fuzzer,address,undefined -v
     TARGET_BIN := $(TARGET_DIR)/chip_emulator_fuzzer
 
     SRCS := $(filter-out main.c render.c, $(ALL_SRCS))
