@@ -224,6 +224,9 @@ The target is set to big endian.
 
 As you can see the ROM in the program's memory is identical to the one in the disk file, so that rules out some sort of program modification 
 
+let's map out the execution flow of the application: 
+
+(basically it jumps to an odd address, making the pc out of allignement. it keeps incrementing I and eventually dxyn tries toa ccess a value oob. The cool thing is actualyl the jump to an odd address that makes the bytes out of alignement rather than the oob read itself)
 
 
 
