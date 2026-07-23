@@ -185,13 +185,14 @@ note that the `pc` is at 563 (0x235). Accounting for the fact that the CPU advan
 looking at the malicious crash rom, we can see
 
 ```hex 
-00000000: 1225 5350 4143 4520 494E 5641 4445 5253  .%SPACE INVADERS
-00000010: 2030 2E39 3120 4279 2044 6176 6964 2057   0.91 By David W
-00000020: 494E 5445 5260 0061 0062 08C2 A3C3 9DC3  INTER`.a.b......
-00000030: 9018 7108 C3B2 1EC3 97C3 9FC3 ADC3 92C2  ..q.............
-00000040: 8FC3 B7C2 9EC3 BF30 4012 2D69 056C 156E  .......0@.-i.l.n
-00000050: 0023 C291 600A C3B0 15C3 B007 3000 124B  .#..`.......0..K
-00000060: 23C2 917E 0112 4566 0068 1C69 006A 046B  #..~..Ef.h.i.j.k
+00000000: 1225 5350 4143 4520 494e 5641 4445 5253  .%SPACE INVADERS
+00000010: 2030 2e39 3120 4279 2044 6176 6964 2057   0.91 By David W
+00000020: 494e 5445 5260 0061 0062 08a3 ddd0 1871  INTER`.a.b.....
+00000030: 08f2 1ed7 dfed d28f f79e ff30 4012 2d69  ...........0@.-i
+00000040: 056c 156e 0023 9160 0af0 15f0 0730 0012  .l.n.#.`.....0..
+00000050: 4b23 917e 0112 4566 0068 1c69 006a 046b  K#.~..Ef.h.i.j.k
+00000060: 0a6c 046d 3c6e 0f00 e023 7523 51fd 1560  .l.m<n...#u#Q..`
+00000070: 04e0 9e12 7d23 7538 0078 ff23 7560 06e0  ....}#u8.x.#u`..
 ```
 
 .... not a Dxyn instruction... (security is fun!)
@@ -202,6 +203,26 @@ so this ROM must be doing something weirder and more interesting than just calli
 
 Do note that the value of I at the time of the crash is 6197 (0x1835), which is way bigger than what any single instruction can set it (Annn can only set it to a max of 4095)
 
+```bash
+(gdb) set endian big
+The target is set to big endian.
+(gdb) x/100xh cpu.memory + 512
+0x555556072ca0 <cpu+512>:       0x1225  0x5350  0x4143  0x4520  0x494e  0x5641  0x4445  0x5253
+0x555556072cb0 <cpu+528>:       0x2030  0x2e39  0x3120  0x4279  0x2044  0x6176  0x6964  0x2057
+0x555556072cc0 <cpu+544>:       0x494e  0x5445  0x5260  0x0061  0x0062  0x08a3  0xddd0  0x1871
+0x555556072cd0 <cpu+560>:       0x08f2  0x1ed7  0xdfed  0xd28f  0xf79e  0xff30  0x4012  0x2d69
+0x555556072ce0 <cpu+576>:       0x056c  0x156e  0x0023  0x9160  0x0af0  0x15f0  0x0730  0x0012
+0x555556072cf0 <cpu+592>:       0x4b23  0x917e  0x0112  0x4566  0x0068  0x1c69  0x006a  0x046b
+0x555556072d00 <cpu+608>:       0x0a6c  0x046d  0x3c6e  0x0f00  0xe023  0x7523  0x51fd  0x1560
+0x555556072d10 <cpu+624>:       0x04e0  0x9e12  0x7d23  0x7538  0x0078  0xff23  0x7560  0x06e0
+0x555556072d20 <cpu+640>:       0x9e12  0x8b23  0x7538  0x3978  0x0123  0x7536  0x0012  0x9f60
+0x555556072d30 <cpu+656>:       0x05e0  0x9e12  0xe966  0x0165  0x1b84  0x80a3  0xd9d4  0x51a3
+0x555556072d40 <cpu+672>:       0xd9d4  0x5175  0xff35  0xff12  0xad66  0x0012  0xe9d4  0x513f
+0x555556072d50 <cpu+688>:       0x0112  0xe9d4  0x5166  0x0083  0x4073  0x0383  0xb562  0xf883
+0x555556072d60 <cpu+704>:       0x2262  0x0833  0x0012  0xc923
+```
+
+As you can see the ROM in the program's memory is identical to the one in the disk file, so that rules out some sort of program modification 
 
 
 
