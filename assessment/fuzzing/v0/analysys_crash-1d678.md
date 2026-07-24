@@ -13,13 +13,13 @@ Starting program: /home/jjp/chip-8-emulator/code/v0/bin/chip_emulator_fuzzer ass
 Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
 INFO: Running with entropic power schedule (0xFF, 100).
 INFO: Seed: 3312083576
-INFO: Loaded 1 modules   (544 inline 8-bit counters): 544 [0x5555556e7b18, 0x5555556e7d38), 
-INFO: Loaded 1 PC tables (544 PCs): 544 [0x5555556e7d38,0x5555556e9f38), 
+INFO: Loaded 1 modules   (544 inline 8-bit counters): 544 [0x5555556e7b18, 0x5555556e7d38),
+INFO: Loaded 1 PC tables (544 PCs): 544 [0x5555556e7d38,0x5555556e9f38),
 [New Thread 0x7ffff24b96c0 (LWP 36892)]
 /home/jjp/chip-8-emulator/code/v0/bin/chip_emulator_fuzzer: Running 1 inputs 1 time(s) each.
 Running: assessment/fuzzing/v0/crash-1d678cddb0badd45f2ac88992b654a032150cc03
 chip8.c:351:31: runtime error: index 4096 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4096]')
-SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:351:31 
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:351:31
 =================================================================
 ==36889==ERROR: AddressSanitizer: global-buffer-overflow on address 0x5555560740dc at pc 0x55555569eb0
 6 bp 0x7fffffffd910 sp 0x7fffffffd908
@@ -60,7 +60,7 @@ Shadow bytes around the buggy address:
   0x555556074300: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
 Shadow byte legend (one shadow byte represents 8 application bytes):
   Addressable:           00
-  Partially addressable: 01 02 03 04 05 06 07 
+  Partially addressable: 01 02 03 04 05 06 07
   Heap left redzone:       fa
   Freed heap region:       fd
   Stack left redzone:      f1
@@ -82,23 +82,23 @@ Shadow byte legend (one shadow byte represents 8 application bytes):
 [Inferior 1 (process 36889) exited with code 01]
 
 (gdb) print cpu
-$1 = {memory = '\000' <repeats 4095 times>, display_buffer = '\000' <repeats 2047 times>, 
-  registers = '\000' <repeats 15 times>, I = 0, delay_timer = 0 '\000', sound_timer = 0 '\000', 
+$1 = {memory = '\000' <repeats 4095 times>, display_buffer = '\000' <repeats 2047 times>,
+  registers = '\000' <repeats 15 times>, I = 0, delay_timer = 0 '\000', sound_timer = 0 '\000',
   pc = 0, sp = 0 '\000', stack = {0 <repeats 16 times>}, keypad = 0, is_halted = 0 '\000', config = {
     mode = 0 '\000'}}
 ```
 
-Right off the bat this telss us a lot of things 
+Right off the bat this telss us a lot of things
 
-firstly the 
+firstly the
 
 chip8.c:351:31: runtime error: index 4096 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4096]')
 
 line tells us that tehre was some sort of oob access (either write or read, it does not tell us) by using index 4096 in a uint8_t[4096] array. Our only uint8_t variable is cpu.memory, so it has to involve that.
 
-A bit lower down we see in this line 
+A bit lower down we see in this line
 
-`#0 0x55555569eb05 in i_drw_vx_vy_n /home/jjp/chip-8-emulator/code/v0/chip8.c:351:31` 
+`#0 0x55555569eb05 in i_drw_vx_vy_n /home/jjp/chip-8-emulator/code/v0/chip8.c:351:31`
 
 that the crash has had something to do with the function `i_drw_vx_vy_n`
 
@@ -139,13 +139,13 @@ static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y, uint8_t
     }
 }
 ```
-in the line 
+in the line
 
-```c 
+```c
 uint8_t sprite_byte = cpu->memory[cpu->I + row];
 ```
 
-we can see that we are acessing the memory array indexing it by I + the row number witohut any kind of sanitization. So a ROM like this: 
+we can see that we are acessing the memory array indexing it by I + the row number witohut any kind of sanitization. So a ROM like this:
 
 Running GDB with a ROM like this:
 
@@ -153,38 +153,40 @@ Running GDB with a ROM like this:
 00000000: AFFF D002                                ....
 ```
 
-we get this output: 
+we get this output:
 
-```bash 
+```bash
 /home/jjp/chip-8-emulator/code/v0/bin/chip_emulator_fuzzer: Running 1 inputs 1 time(s) each.
 Running: ../../assessment/fuzzing/v0/malicious_roms/dxyn_oob_read.ch8
 chip8.c:351:31: runtime error: index 4096 out of bounds for type 'uint8_t[4096]' (aka 'unsigned char[4
 096]')
-SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:351:31 
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:351:31
 Executed ../../assessment/fuzzing/v0/malicious_roms/dxyn_oob_read.ch8 in 2 ms
 ```
-If we run gdb with `set environment ASAN_OPTIONS=abort_on_error=1` we can print out the state of our CPU right before the crash: 
+
+If we run gdb with `set environment ASAN_OPTIONS=abort_on_error=1` we can print out the state of our CPU right before the crash:
+
 ```bash
 (gdb) print cpu
 $1 = {
   memory = '\000' <repeats 80 times>, "𐐐\360 `  p\360\020\360\200\360\360\020\360\020\360\220\220\360\
 020\020\360\200\360\020\360\360\200\360\220\360\360\020 @@\360\220\360\220\360\360\220\360\020\360\360
 \220\360\220\220\340\220\340\220\340\360\200\200\200\360\340\220\220\220\340\360\200\360\200\360\360\2
-00\360\200\200", '\000' <repeats 352 times>..., 
+00\360\200\200", '\000' <repeats 352 times>...,
   display_buffer = "\001\000\001\000\001\000\001", '\000' <repeats 59 times>, "\001\001\001\000\000\00
 1", '\000' <repeats 56 times>, "\001\001\001\001\001\001\001\001", '\000' <repeats 58 times>, "\001\00
-1", '\000' <repeats 62 times>..., registers = "\000X\b", '\000' <repeats 12 times>, I = 6197, 
+1", '\000' <repeats 62 times>..., registers = "\000X\b", '\000' <repeats 12 times>, I = 6197,
   delay_timer = 0 '\000', sound_timer = 0 '\000', pc = 565, sp = 0 '\000', stack = {
     0 <repeats 16 times>}, keypad = 0, is_halted = 0 '\000', config = {mode = 0 '\000'}}
 ```
 
 note that the `pc` is at 563 (0x235). Accounting for the fact that the CPU advances the PC before executing the instruction it just read and for the fact that the first byte of the ROM is placed at 0x200 in the memory of the ROM, we should find the instruction that is responsible for the crash at offset
 
-0x235 - 0x202 = 0x33 
+0x235 - 0x202 = 0x33
 
 looking at the malicious crash rom, we can see
 
-```hex 
+```hex
 00000000: 1225 5350 4143 4520 494e 5641 4445 5253  .%SPACE INVADERS
 00000010: 2030 2e39 3120 4279 2044 6176 6964 2057   0.91 By David W
 00000020: 494e 5445 5260 0061 0062 08a3 ddd0 1871  INTER`.a.b.....
@@ -195,15 +197,46 @@ looking at the malicious crash rom, we can see
 00000070: 04e0 9e12 7d23 7538 0078 ff23 7560 06e0  ....}#u8.x.#u`..
 ```
 
-.... not a Dxyn instruction... (security is fun!)
+indeed, the word (two consecutive bytes) at offset 0x33 is `D7 DF`, which the interpreter would interpret as a Dxyn (Draw the sprite at memory position I with n columns at position x and y).
 
-But there is no other way to access (in a valid manner) the i_drw_vx_vy_n function 
+```
+DEBUG: PC:0223 | OP:1225 | JP 0x225
+DEBUG: PC:0225 | OP:6000 | LD V0, 0x00
+DEBUG: PC:0227 | OP:6100 | LD V1, 0x00
+DEBUG: PC:0229 | OP:6208 | LD V2, 0x08
+DEBUG: PC:022B | OP:A3DD | LD I, 0x3DD
+DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
+DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
+DEBUG: PC:0231 | OP:F21E | ADD I, V2
+DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
+DEBUG: PC:0235 | OP:EDD2 | invalid operation
+DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
+DEBUG: PC:023B | OP:9EFF | SNE VE, VF
+DEBUG: PC:022B | OP:122D | JP 0x22D
+DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
+DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
+DEBUG: PC:0231 | OP:F21E | ADD I, V2
+DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
+DEBUG: PC:0235 | OP:EDD2 | invalid operation
+DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
+DEBUG: PC:023B | OP:9EFF | SNE VE, VF
+DEBUG: PC:022B | OP:122D | JP 0x22D
+DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
+DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
+DEBUG: PC:0231 | OP:F21E | ADD I, V2
+DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
+DEBUG: PC:0235 | OP:EDD2 | invalid operation
+DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
+DEBUG: PC:023B | OP:9EFF | SNE VE, VF
+DEBUG: PC:022B | OP:122D | JP 0x22D
+```
 
-so this ROM must be doing something weirder and more interesting than just calling Dxyn with a high address in I. 
 
-Do note that the value of I at the time of the crash is 6197 (0x1835), which is way bigger than what any single instruction can set it (Annn can only set it to a max of 4095)
+the PC is odd because of the first jump instruction
 
-```bash
+Do note that the value of I at the time of the crash is 6197 (0x1835), which is way bigger than what any single instruction can set it (Annn can only set it to a max of 4095), and the large number is what makes this code crash. Let's explore the execution flow of the program and try to understand how it works
+
+```Bash
 (gdb) set endian big
 The target is set to big endian.
 (gdb) x/100xh cpu.memory + 512
@@ -222,18 +255,15 @@ The target is set to big endian.
 0x555556072d60 <cpu+704>:       0x2262  0x0833  0x0012  0xc923
 ```
 
-As you can see the ROM in the program's memory is identical to the one in the disk file, so that rules out some sort of program modification 
+As you can see the ROM in the program's memory is identical to the one in the disk file, so that rules out some sort of program modification
 
-let's map out the execution flow of the application: 
+Let's map out the execution flow of the application:
 
 (basically it jumps to an odd address, making the pc out of allignement. it keeps incrementing I and eventually dxyn tries toa ccess a value oob. The cool thing is actualyl the jump to an odd address that makes the bytes out of alignement rather than the oob read itself)
 
 
 
-
-
-
-```hex 
+```hex
 00000000: 1225 5350 4143 4520 494E 5641 4445 5253  .%SPACE INVADERS
 00000010: 2030 2E39 3120 4279 2044 6176 6964 2057   0.91 By David W
 00000020: 494E 5445 5260 0061 0062 08C2 A3C3 9DC3  INTER`.a.b......
