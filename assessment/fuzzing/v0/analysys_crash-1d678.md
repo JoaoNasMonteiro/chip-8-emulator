@@ -199,42 +199,11 @@ looking at the malicious crash rom, we can see
 
 indeed, the word (two consecutive bytes) at offset 0x33 is `D7 DF`, which the interpreter would interpret as a Dxyn (Draw the sprite at memory position I with n columns at position x and y).
 
-```
-DEBUG: PC:0223 | OP:1225 | JP 0x225
-DEBUG: PC:0225 | OP:6000 | LD V0, 0x00
-DEBUG: PC:0227 | OP:6100 | LD V1, 0x00
-DEBUG: PC:0229 | OP:6208 | LD V2, 0x08
-DEBUG: PC:022B | OP:A3DD | LD I, 0x3DD
-DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
-DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
-DEBUG: PC:0231 | OP:F21E | ADD I, V2
-DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
-DEBUG: PC:0235 | OP:EDD2 | invalid operation
-DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
-DEBUG: PC:023B | OP:9EFF | SNE VE, VF
-DEBUG: PC:022B | OP:122D | JP 0x22D
-DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
-DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
-DEBUG: PC:0231 | OP:F21E | ADD I, V2
-DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
-DEBUG: PC:0235 | OP:EDD2 | invalid operation
-DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
-DEBUG: PC:023B | OP:9EFF | SNE VE, VF
-DEBUG: PC:022B | OP:122D | JP 0x22D
-DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
-DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
-DEBUG: PC:0231 | OP:F21E | ADD I, V2
-DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
-DEBUG: PC:0235 | OP:EDD2 | invalid operation
-DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
-DEBUG: PC:023B | OP:9EFF | SNE VE, VF
-DEBUG: PC:022B | OP:122D | JP 0x22D
-```
-
-
-the PC is odd because of the first jump instruction
 
 Do note that the value of I at the time of the crash is 6197 (0x1835), which is way bigger than what any single instruction can set it (Annn can only set it to a max of 4095), and the large number is what makes this code crash. Let's explore the execution flow of the program and try to understand how it works
+
+note also that the PC is odd because of the first jump instruction, 0x1225, that jumps to address 0x225, and since the PC increments by 2 each cpu_step then the parity never changes
+
 
 ```Bash
 (gdb) set endian big
@@ -259,120 +228,146 @@ As you can see the ROM in the program's memory is identical to the one in the di
 
 Let's map out the execution flow of the application:
 
-(basically it jumps to an odd address, making the pc out of allignement. it keeps incrementing I and eventually dxyn tries toa ccess a value oob. The cool thing is actualyl the jump to an odd address that makes the bytes out of alignement rather than the oob read itself)
+It starts out with this hot mess:
+
+```log
+DEBUG: PC:0223 | OP:1225 | JP 0x225
+DEBUG: PC:0225 | OP:6000 | LD V0, 0x00
+DEBUG: PC:0227 | OP:6100 | LD V1, 0x00
+DEBUG: PC:0229 | OP:6208 | LD V2, 0x08
+DEBUG: PC:022B | OP:A3DD | LD I, 0x3DD
+DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
+DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
+DEBUG: PC:0231 | OP:F21E | ADD I, V2
+DEBUG: PC:0233 | OP:D7DF | DRW V7, VD, F
+DEBUG: PC:0235 | OP:EDD2 | invalid operation
+DEBUG: PC:0237 | OP:8FF7 | SUBN VF, VF
+DEBUG: PC:023B | OP:9EFF | SNE VE, VF
+DEBUG: PC:022B | OP:122D | JP 0x22D
+```
+it jumps forwards to the odd address 0x225, loads 0x8 into V2, loads some initial value into I, draws the sprite at memory location I to the screen, adds V2 to I (increasing it's value), draws again and jumps backwards to 0x22D.
+
+From then on it loops, but with each iteration the value at I gets slighly bigger (by 0x8 each cycle, in fact)
+
+It then repeats this endlessly.. or at least at whatever point something breaks, in this case the value of I excedes the size of the memory and sice Dxyn accesses the ram by indexing it at I + some ooffset then we crash.
+
+But why crash at I = 0x1835 and not at some value closer to 0x1000?
+
+For that we'll have to look a bit into how C structs are laid out in memory and how ASAN works. in our code the cpu struct looks like this:
+
+```C
+typedef struct chip8_cpu {
+    uint8_t memory[MEM_SIZE];
+    uint8_t display_buffer[MAX_DISPLAY_SIZE];
+    uint8_t registers[16];
+    uint16_t I;
+    uint8_t delay_timer;
+    uint8_t sound_timer;
+    uint16_t pc;
+    uint8_t sp;
+    uint16_t stack[16];
+    uint16_t keypad;
+    uint8_t is_halted;
+    struct chip8_cpu_config config;
+} chip8_cpu_t;
+```
+to find out in bytes we can just add up the fields:
+    - memory: 4096 * 1 byte = 4096
+    - display_buffer = 2048 * 1 byte = 2048
+    - registers: 16 * 1 byte = 16 bytes
+    - I: 1 * 2 bytes = 2
+    - dt, st, sp: 1 byte for each = 3 bytes
+    - pc: 1 * 2 bytes = 2
+    - stack: 16 * 2 bytes = 32
+    - keypad: 2 bytes
+    - is_halted: 1 byte
+    - config: 1 byte
+totaling 6203
+
+or.. we could just print sezeof(chip8_cpu_t):
+
+```bash
+$ ./a.out
+6204
+```
+what??
+
+that has to do with struct padding. Basically the CPU enjoys having values stored in even, preferrably power-of-two positions in memory so that it can perform it's operations really fast. Computers, especially in the hardware world, love predictability and alignement
+
+Let's walkk through how C would lay out our struct:
+    1. First it lays out the 4096 bytes of memory, so from byte 0 to byte 4095. The next avaliable byte is 4096, which is even
+    2. Then it lays out bytes from 4096 to 6145, these are the bytes for the display display_buffer
+    3. It lays down from 6145 to 6159 for the registers 
+    4. to 6161 for I 
+    5. then 2 for dt and st, so until 6163 
+    6. two for pc, so to 6165 
+    7. one for sp, so it fills up untill 6166 
+    8. The next available position in 6167, but that's an odd address, so the compiler adds ony bye of padding, filling memory up to byte 6149 
+    9. Then the compiler continues lating ut meory normally, and because there isn't another instance where the next available byte falls in an odd byte it does not add any more padding bytes 
+
+[source](https://blog.trailofbits.com/2024/05/16/understanding-addresssanitizer-better-memory-safety-for-your-code/)
+
+ASAN (address sanitizers) works by adding many checks to your program at compile time that scream at you at run time if your program goofs up something memory related, such as accesses previously freed memory (use after free), forgets to deallocate memory (memory leak) or if it access memory out of bounds, which is our case
+
+The downside is that it makes the program bigger and slower, so you usually don't build production software with it, and use it for validation and debugging only. 
+
+to check for oob access ASan adds stack canaries, basically regions of memory that surround your program's own and that it can use to identify illegal access 
+
+ASan placed it's stack canaries surrounding our struct, but not in the middle of it, so it only screamed at us when we tried to index memory at 6197, which by itself is not enough to overfloww the struct, but the instruction it was executing was D7 DF, so it was trying to draw a 15 column sprite, so it looped 6 times before trying to access address 6205 and ASan crashed out.
+
+A fix wouuld be to simply check for oob acces whenever we index into the memory directly: 
 
 
+Example unsafe pattern
+```C 
+static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
+                                 uint8_t n) {
+    uint8_t start_x = cpu->registers[x] % DISPLAY_WIDTH;
+    uint8_t start_y = cpu->registers[y] % DISPLAY_HEIGHT;
 
-```hex
-00000000: 1225 5350 4143 4520 494E 5641 4445 5253  .%SPACE INVADERS
-00000010: 2030 2E39 3120 4279 2044 6176 6964 2057   0.91 By David W
-00000020: 494E 5445 5260 0061 0062 08C2 A3C3 9DC3  INTER`.a.b......
-00000030: 9018 7108 C3B2 1EC3 97C3 9FC3 ADC3 92C2  ..q.............
-00000040: 8FC3 B7C2 9EC3 BF30 4012 2D69 056C 156E  .......0@.-i.l.n
-00000050: 0023 C291 600A C3B0 15C3 B007 3000 124B  .#..`.......0..K
-00000060: 23C2 917E 0112 4566 0068 1C69 006A 046B  #..~..Ef.h.i.j.k
-00000070: 0A6C 046D 3C6E 0F00 C3A0 2375 2351 C3BD  .l.m<n....#u#Q..
-00000080: 1560 04C3 A0C2 9E12 7D23 7538 0078 C3BF  .`......}#u8.x..
-00000090: 2375 6006 C3A0 C29E 12C2 8B23 7538 3978  #u`........#u89x
-000000a0: 0123 7536 0012 C29F 6005 C3A0 C29E 12C3  .#u6....`.......
-000000b0: A966 0165 1BC2 84C2 80C2 A3C3 99C3 9451  .f.e...........Q
-000000c0: C2A3 C399 C394 5175 C3BF 35C3 BF12 C2AD  ......Qu..5.....
-000000d0: 6600 12C3 A9C3 9451 3F01 12C3 A9C3 9451  f......Q?......Q
-000000e0: 6600 C283 4073 03C2 83C2 B562 C3B8 C283  f...@s.....b....
-000000f0: 2262 0833 0012 C389 237D C282 0643 0812  "b.3....#}...C..
-00000100: C393 3310 12C3 9523 7DC2 8206 3318 12C3  ..3....#}...3...
-00000110: 9D23 7DC2 8206 4320 12C3 A733 2812 C3A9  .#}...C ...3(...
-00000120: 237D 3E00 1307 7906 4918 6900 6A04 6B0A  #}>...y.I.i.j.k.
-00000130: 6C04 7DC3 B46E 0F00 C3A0 2351 2375 C3BD  l.}..n....#Q#u..
-00000140: 1512 6FC3 B707 3700 126F C3BD 1523 51C2  ..o...7..o...#Q.
-00000150: 8BC2 A43B 1213 1B7C 026A C3BC 3B02 1323  ...;...|.j..;..#
-00000160: 7C02 6A04 2351 3C18 126F 00C3 A0C2 A4C3  |.j.#Q<..o......
-00000170: 9D60 1461 0862 0FC3 901F 7008 C3B2 1E30  .`.a.b....p....0
-00000180: 2C13 3360 C3BF C3B0 15C3 B007 3000 1341  ,.3`........0..A
-00000190: C3B0 0A00 C3A0 C2A7 06C3 BE65 1225 C2A3  ...........e.%..
-000001a0: C381 C3B9 1E61 0823 69C2 8106 2369 C281  .....a.#i...#i..
-000001b0: 0623 69C2 8106 2369 7BC3 9000 C3AE C280  .#i...#i{.......
-000001c0: C3A0 C280 1230 00C3 9BC3 867B 0C00 C3AE  .....0.....{....
-000001d0: C2A3 C399 601C C398 0400 C3AE 2351 C28E  ....`.......#Q..
-000001e0: 2323 5160 05C3 B018 C3B0 15C3 B007 3000  ##Q`..........0.
-000001f0: 13C2 8900 C3AE 6A00 C28D C3A0 6B04 C3A9  ......j.....k...
-00000200: C2A1 1257 C2A6 0CC3 BD1E C3B0 6530 C3BF  ...W........e0..
-00000210: 13C2 AF6A 006B 046D 016E 0113 C297 C2A5  ...j.k.m.n......
-00000220: 0AC3 B01E C39B C386 7B08 7D01 7A01 3A07  ........{.}.z.:.
-00000230: 13C2 9700 C3AE 3C7E C3BF C3BF C299 C299  ......<~........
-00000240: 7EC3 BFC3 BF24 24C3 A77E C3BF 3C3C 7EC3  ~....$$..~..<<~.
-00000250: 9BC2 8142 3C7E C3BF C39B 1038 7CC3 BE00  ...B<~.....8|...
-00000260: 007F 003F 007F 0000 0001 0101 0303 0303  ...?............
-00000270: 0000 3F20 2020 2020 2020 203F 0808 C3BF  ..?        ?....
-00000280: 0000 C3BE 00C3 BC00 C3BE 0000 007E 4242  .............~BB
-00000290: 6262 6262 0000 C3BF 0000 0000 0000 0000  bbbb............
-000002a0: C3BF 0000 C3BF 007D 0041 7D05 7D7D 0000  .......}.A}.}}..
-000002b0: C382 C382 C386 446C 2838 0000 C3BF 0000  ......Dl(8......
-000002c0: 0000 0000 0000 C3BF 0000 C3BF 00C3 B710  ................
-000002d0: 14C3 B7C3 B704 0400 007C 44C3 BEC3 82C3  .........|D.....
-000002e0: 82C3 82C3 8200 00C3 BF00 0000 0000 0000  ................
-000002f0: 00C3 BF00 00C3 BF00 C3AF 2028 C3A8 C3A8  .......... (....
-00000300: 2F2F 0000 C3B9 C285 C385 C385 C385 C385  //..............
-00000310: C3B9 0000 C3BF 0000 0000 0000 0000 C3BF  ................
-00000320: 0000 C3BF 00C2 BE00 2030 20C2 BEC2 BE00  ........ 0 .....
-00000330: 00C3 B704 C3A7 C285 C285 C284 C3B4 0000  ................
-00000340: C3BF 0000 0000 0000 00C3 BF00 0000 C3BF  ................
-00000350: 0000 7F00 3F00 7F00 0000 C3AF 28C3 AF00  ....?.......(...
-00000360: C3A0 606F 0000 C3BF 0000 0000 0000 0000  ..`o............
-00000370: C3BF 0000 C3BF 0000 C3BE 00C3 BC00 C3BE  ................
-00000380: 0000 00C3 8000 C380 C380 C380 C380 C380  ................
-00000390: 0000 C3BC 0404 0404 0404 0404 C3BC 1010  ................
-000003a0: C3BF C3B9 C281 C2B9 C28B C29A C29A C3BA  ................
-000003b0: 00C3 BAC2 8AC2 9AC2 9AC2 9BC2 99C3 B8C3  ................
-000003c0: A625 25C3 B434 3434 0017 1434 3736 26C3  .%%..444...476&.
-000003d0: 87C3 9F50 505C C398 C398 C39F 00C3 9F11  ...PP\..........
-000003e0: 1F12 1B19 C399 7C44 C3BE C286 C286 C286  ......|D........
-000003f0: C3BC C284 C3BE C282 C282 C3BE C3BE C280  ................
-00000400: C380 C380 C380 C3BE C3BC C282 C382 C382  ................
-00000410: C382 C3BC C3BE C280 C3B8 C380 C380 C3BE  ................
-00000420: C3BE C280 C3B0 C380 C380 C380 C3BE C280  ................
-00000430: C2BE C286 C286 C3BE C286 C286 C3BE C286  ................
-00000440: C286 C286 1010 1010 1010 1818 1848 4878  .............HHx
-00000450: C29C C290 C2B0 C380 C2B0 C29C C280 C280  ................
-00000460: C380 C380 C380 C3BE C3AE C292 C292 C286  ................
-00000470: C286 C286 C3BE C282 C286 C286 C286 C286  ................
-00000480: 7CC2 82C2 86C2 86C2 867C C3BE C282 C3BE  |........|......
-00000490: C380 C380 C380 7CC2 82C3 82C3 8AC3 847A  ......|........z
-000004a0: C3BE C286 C3BE C290 C29C C284 C3BE C380  ................
-000004b0: C3BE 0202 C3BE C3BE 1030 3030 30C2 82C2  .........0000...
-000004c0: 82C3 82C3 82C3 82C3 BEC2 82C2 82C2 82C3  ................
-000004d0: AE38 10C2 86C2 86C2 96C2 92C2 92C3 AEC2  .8..............
-000004e0: 8244 3838 44C2 82C2 82C2 82C3 BE30 3030  .D88D........000
-000004f0: C3BE 021E C3B0 C280 C3BE 0000 0000 0606  ................
-00000500: 0000 0060 60C3 8000 0000 0000 0018 1818  ...``...........
-00000510: 1800 187C C386 0C18 0018 0032 C3BE C3BE  ...|.......2....
-00000520: 0000 C3BE C282 C286 C286 C286 C3BE 0808  ................
-00000530: 0818 1818 C3BE 02C3 BEC3 80C3 80C3 BEC3  ................
-00000540: BE02 1E06 06C3 BEC2 84C3 84C3 84C3 BE04  ................
-00000550: 04C3 BEC2 80C3 BE06 06C3 BEC3 80C3 80C3  ................
-00000560: 80C3 BEC2 82C3 BEC3 BE02 0206 0606 7C44  ..............|D
-00000570: C3BE C286 C286 C3BE C3BE C282 C3BE 0606  ................
-00000580: 0644 C3BE 4444 C3BE 44C2 A8C2 A8C2 A8C2  .D..DD..D.......
-00000590: A8C2 A8C2 A8C2 A86C 5A00 0C18 C2A8 304E  .......lZ.....0N
-000005a0: 7E00 1218 666C C2A8 5A66 5424 6600 4848  ~...fl..ZfT$f.HH
-000005b0: 1812 C2A8 06C2 90C2 A812 007E 3012 C2A8  ...........~0...
-000005c0: C284 304E 7218 66C2 A8C2 A8C2 A8C2 A8C2  ..0Nr.f.........
-000005d0: A8C2 A8C2 9054 78C2 A848 786C 72C2 A812  .....Tx..Hxlr...
-000005e0: 186C 7266 54C2 90C2 A872 2A18 C2A8 304E  .lrfT....r*...0N
-000005f0: 7E00 1218 666C C2A8 7254 C2A8 5A66 187E  ~...fl..rT..Zf.~
-00000600: 184E 72C2 A872 2A18 3066 C2A8 304E 7E00  .Nr..r*.0f..0N~.
-00000610: 6C30 544E C29C C2A8 C2A8 C2A8 C2A8 C2A8  l0TN............
-00000620: C2A8 C2A8 4854 7E18 C2A8 C290 5478 66C2  ....HT~.....Txf.
-00000630: A86C 2A30 5AC2 A8C2 8430 722A C2A8 C398  .l*0Z....0r*....
-00000640: C2A8 004E 12C2 A8C3 A4C2 A2C2 A800 4E12  ...N..........N.
-00000650: C2A8 6C2A 5454 72C2 A8C2 8430 722A C2A8  ..l*TTr....0r*..
-00000660: C39E C29C C2A8 722A 18C2 A80C 5448 5A78  ......r*....THZx
-00000670: 7218 66C2 A866 185A 5466 726C C2A8 722A  r.f..f.ZTfrl..r*
-00000680: 0072 C2A8 722A 18C2 A830 4E7E 0012 1866  .r..r*...0N~...f
-00000690: 6CC2 A800 6618 C2A8 304E 0C66 1800 6C30  l...f...0N.f..l0
-000006a0: 4E24 C2A8 722A 1830 66C2 A81E 5466 0C18  N$..r*.0f...Tf..
-000006b0: C29C C2A8 2454 5412 C2A8 4278 0C3C C2A8  ....$TT...Bx.<..
-000006c0: C2AE C2A8 C2A8 C2A8 C2A8 C2A8 C2A8 C2A8  ................
-000006d0: C3BF 0000 0000 0000 0000 0000 0000 0000  ................
-000006e0: 00                                       .
+    cpu->registers[0xF] = 0;
+
+    for (int row = 0; row < n; row++) {
+        uint8_t sprite_byte = cpu->memory[cpu->I + row];
+
+        for (int col = 0; col < 8; col++) {
+            uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 1;
+
+            if (sprite_pixel == 0) {
+                continue;
+            }
+
+            uint16_t current_x = start_x + col;
+            uint16_t current_y = start_y + row;
+
+            if (current_x >= DISPLAY_WIDTH || current_y >= DISPLAY_HEIGHT) {
+                continue;
+            }
+
+            uint16_t buff_index = (current_y * DISPLAY_WIDTH) + current_x;
+
+            if (cpu->display_buffer[buff_index] == 1) {
+                cpu->registers[0xF] = 1;
+            }
+
+            cpu->display_buffer[buff_index] ^= 1;
+        }
+    }
+}
+
+```
+
+Example safe pattern 
+```C
+
+```
+
+now the program crashes and does not let the memory run free 
+
+```bash
+DEBUG: PC:022B | OP:122D | JP 0x22D
+DEBUG: PC:022D | OP:D018 | DRW V0, V1, 8
+DEBUG: PC:022F | OP:7108 | ADD V1, 0x08
+DEBUG: PC:0231 | OP:F21E | ADD I, V2
+chip_emulator_fuzzer: chip8.c:352: void i_drw_vx_vy_n(chip8_cpu_t *, uint8_t, uint8_t, uint8_t): Assertion `(cpu->I + row) < MAX_ROM_SIZE' failed.
 ```
