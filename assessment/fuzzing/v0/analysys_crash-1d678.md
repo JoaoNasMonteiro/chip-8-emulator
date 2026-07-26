@@ -297,29 +297,29 @@ that has to do with struct padding. Basically the CPU enjoys having values store
 Let's walkk through how C would lay out our struct:
     1. First it lays out the 4096 bytes of memory, so from byte 0 to byte 4095. The next avaliable byte is 4096, which is even
     2. Then it lays out bytes from 4096 to 6145, these are the bytes for the display display_buffer
-    3. It lays down from 6145 to 6159 for the registers 
-    4. to 6161 for I 
-    5. then 2 for dt and st, so until 6163 
-    6. two for pc, so to 6165 
-    7. one for sp, so it fills up untill 6166 
-    8. The next available position in 6167, but that's an odd address, so the compiler adds ony bye of padding, filling memory up to byte 6149 
-    9. Then the compiler continues lating ut meory normally, and because there isn't another instance where the next available byte falls in an odd byte it does not add any more padding bytes 
+    3. It lays down from 6145 to 6159 for the registers
+    4. to 6161 for I
+    5. then 2 for dt and st, so until 6163
+    6. two for pc, so to 6165
+    7. one for sp, so it fills up untill 6166
+    8. The next available position in 6167, but that's an odd address, so the compiler adds ony bye of padding, filling memory up to byte 6149
+    9. Then the compiler continues lating ut meory normally, and because there isn't another instance where the next available byte falls in an odd byte it does not add any more padding bytes
 
 [source](https://blog.trailofbits.com/2024/05/16/understanding-addresssanitizer-better-memory-safety-for-your-code/)
 
 ASAN (address sanitizers) works by adding many checks to your program at compile time that scream at you at run time if your program goofs up something memory related, such as accesses previously freed memory (use after free), forgets to deallocate memory (memory leak) or if it access memory out of bounds, which is our case
 
-The downside is that it makes the program bigger and slower, so you usually don't build production software with it, and use it for validation and debugging only. 
+The downside is that it makes the program bigger and slower, so you usually don't build production software with it, and use it for validation and debugging only.
 
-to check for oob access ASan adds stack canaries, basically regions of memory that surround your program's own and that it can use to identify illegal access 
+to check for oob access ASan adds stack canaries, basically regions of memory that surround your program's own and that it can use to identify illegal access
 
 ASan placed it's stack canaries surrounding our struct, but not in the middle of it, so it only screamed at us when we tried to index memory at 6197, which by itself is not enough to overfloww the struct, but the instruction it was executing was D7 DF, so it was trying to draw a 15 column sprite, so it looped 6 times before trying to access address 6205 and ASan crashed out.
 
-A fix wouuld be to simply check for oob acces whenever we index into the memory directly: 
+A fix wouuld be to simply check for oob acces whenever we index into the memory directly:
 
 
 Example unsafe pattern
-```C 
+```C
 static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
                                  uint8_t n) {
     uint8_t start_x = cpu->registers[x] % DISPLAY_WIDTH;
@@ -357,12 +357,51 @@ static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
 
 ```
 
-Example safe pattern 
+Example safe pattern
 ```C
+static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
+                                 uint8_t n) {
+    uint8_t start_x = cpu->registers[x] % DISPLAY_WIDTH;
+    uint8_t start_y = cpu->registers[y] % DISPLAY_HEIGHT;
 
+    cpu->registers[0xF] = 0;
+
+    for (int row = 0; row < n; row++) {
+        // correction number one
+        // The program will still crash this ay, but now it crashes in a
+        // controlled manner that an attacker (hopefully) cannot exploit
+        assert((cpu->I + row) < MAX_ROM_SIZE);
+        assert((cpu->I + row) > 0);
+
+        uint8_t sprite_byte = cpu->memory[cpu->I + row];
+
+        for (int col = 0; col < 8; col++) {
+            uint8_t sprite_pixel = (sprite_byte >> (7 - col)) & 1;
+
+            if (sprite_pixel == 0) {
+                continue;
+            }
+
+            uint16_t current_x = start_x + col;
+            uint16_t current_y = start_y + row;
+
+            if (current_x >= DISPLAY_WIDTH || current_y >= DISPLAY_HEIGHT) {
+                continue;
+            }
+
+            uint16_t buff_index = (current_y * DISPLAY_WIDTH) + current_x;
+
+            if (cpu->display_buffer[buff_index] == 1) {
+                cpu->registers[0xF] = 1;
+            }
+
+            cpu->display_buffer[buff_index] ^= 1;
+        }
+    }
+}
 ```
 
-now the program crashes and does not let the memory run free 
+now the program crashes and does not let the oob read run free and possibly be exploited by attackers
 
 ```bash
 DEBUG: PC:022B | OP:122D | JP 0x22D
