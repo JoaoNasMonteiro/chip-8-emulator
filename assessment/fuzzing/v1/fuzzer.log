@@ -1,0 +1,66 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2074182345
+INFO: Loaded 1 modules   (963 inline 8-bit counters): 963 [0x5c0906378548, 0x5c090637890b), 
+INFO: Loaded 1 PC tables (963 PCs): 963 [0x5c0906378910,0x5c090637c540), 
+INFO:        0 files found in assessment/fuzzing/v1/
+INFO:      245 files found in assessment/fuzzing/corpus_fuzzing/
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: seed corpus: files: 245 min: 7b max: 3203b total: 91970b rss: 36Mb
+chip8.c:100:9: runtime error: index 16 out of bounds for type 'uint16_t[16]' (aka 'unsigned short[16]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:100:9 
+chip8.c:85:23: runtime error: index 16 out of bounds for type 'uint16_t[16]' (aka 'unsigned short[16]')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior chip8.c:85:23 
+=================================================================
+==3541==ERROR: AddressSanitizer: global-buffer-overflow on address 0x5c0906d06ab6 at pc 0x5c090631d1fe bp 0x7ffd1d1788d0 sp 0x7ffd1d1788c8
+READ of size 2 at 0x5c0906d06ab6 thread T0
+    #0 0x5c090631d1fd in cpu_step /home/jjp/chip-8-emulator/code/v1/chip8.c:85:23
+    #1 0x5c090632ec9a in LLVMFuzzerTestOneInput /home/jjp/chip-8-emulator/code/v1/fuzz.c:28:9
+    #2 0x5c0906228cd4 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x58cd4) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #3 0x5c09062283c9 in fuzzer::Fuzzer::RunOne(unsigned char const*, unsigned long, bool, fuzzer::InputInfo*, bool, bool*) (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x583c9) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #4 0x5c0906229fe6 in fuzzer::Fuzzer::ReadAndExecuteSeedCorpora(std::vector<fuzzer::SizedFile, std::allocator<fuzzer::SizedFile>>&) (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x59fe6) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #5 0x5c090622a4f7 in fuzzer::Fuzzer::Loop(std::vector<fuzzer::SizedFile, std::allocator<fuzzer::SizedFile>>&) (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x5a4f7) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #6 0x5c09062179ef in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x479ef) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #7 0x5c0906242076 in main (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x72076) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+    #8 0x70293e82a1c9 in __libc_start_call_main csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+    #9 0x70293e82a28a in __libc_start_main csu/../csu/libc-start.c:360:3
+    #10 0x5c090620c9d4 in _start (/home/jjp/chip-8-emulator/code/v1/bin/chip_emulator_fuzzer+0x3c9d4) (BuildId: 7345093bfd59592c23b9a5b79da8b6f436f91f3d)
+
+0x5c0906d06ab6 is located 474 bytes after global variable 'cpu' defined in '/home/jjp/chip-8-emulator/code/v1/fuzz.c:7' (0x5c0906d050a0) of size 6204
+SUMMARY: AddressSanitizer: global-buffer-overflow /home/jjp/chip-8-emulator/code/v1/chip8.c:85:23 in cpu_step
+Shadow bytes around the buggy address:
+  0x5c0906d06800: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x5c0906d06880: 00 00 00 00 00 00 00 00 00 00 00 04 f9 f9 f9 f9
+  0x5c0906d06900: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06980: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06a00: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+=>0x5c0906d06a80: f9 f9 f9 f9 f9 f9[f9]f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06b00: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06b80: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06c00: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06c80: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+  0x5c0906d06d00: f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9 f9
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==3541==ABORTING
+MS: 0 ; base unit: 0000000000000000000000000000000000000000
+0x12,0x4e,0x8,0x19,0x1,0x1,0x8,0x1,0xf,0x1,0x1,0x9,0x8,0x9,0xf,0x9,0x1,0x11,0x8,0x11,0xf,0x11,0x1,0x19,0x15,0xf,0x19,0x16,0x1,0x16,0x9,0x16,0x11,0x16,0x19,0xfc,0xfc,0xfc,0xfc,0xfc,0xfc,0xfc,0x0,0xa2,0x2,0x82,0xe,0xf2,0x1e,0x82,0x6,0xf1,0x65,0x92,0x0,0xee,0xa2,0x2,0x82,0xe,0xf2,0x1e,0x82,0x6,0xf1,0x55,0x0,0xee,0x6f,0x10,0xff,0x15,0xff,0x7,0x3f,0x0,0x12,0x46,0x0,0xee,0x0,0xe0,0x62,0x0,0x22,0x2a,0xf2,0x29,0xd0,0x15,0x70,0xff,0x71,0xff,0x22,0x36,0x72,0x1,0x32,0x10,0x12,0x52,0xf2,0xa,0x22,0x2a,0xa2,0x22,0xd0,0x17,0x22,0x42,0xd0,0x17,0x12,0x64,
+\022N\010\031\001\001\010\001\017\001\001\011\010\011\017\011\001\021\010\021\017\021\001\031\025\017\031\026\001\026\011\026\021\026\031\374\374\374\374\374\374\374\000\242\002\202\016\362\036\202\006\361e\222\000\356\242\002\202\016\362\036\202\006\361U\000\356o\020\377\025\377\007?\000\022F\000\356\000\340b\000\"*\362)\320\025p\377q\377\"6r\0012\020\022R\362\012\"*\242\"\320\027\"B\320\027\022d
+artifact_prefix='./'; Test unit written to ./crash-841a4eeb81a8e3ee75c3a6c4bfab863da78470db
+Base64: Ek4IGQEBCAEPAQEJCAkPCQERCBEPEQEZFQ8ZFgEWCRYRFhn8/Pz8/Pz8AKICgg7yHoIG8WWSAO6iAoIO8h6CBvFVAO5vEP8V/wc/ABJGAO4A4GIAIiryKdAVcP9x/yI2cgEyEBJS8goiKqIi0BciQtAXEmQ=
