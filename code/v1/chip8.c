@@ -351,6 +351,10 @@ static inline void i_drw_vx_vy_n(chip8_cpu_t *cpu, uint8_t x, uint8_t y,
         // correction number one
         // The program will still crash this ay, but now it crashes in a
         // controlled manner that an attacker (hopefully) cannot exploit
+
+        if (((cpu->I + row) < MAX_ROM_SIZE) || ((cpu->I + row) < 0)) {
+            continue;
+        }
         assert((cpu->I + row) < MAX_ROM_SIZE);
         assert((cpu->I + row) > 0);
 
